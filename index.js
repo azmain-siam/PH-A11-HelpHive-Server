@@ -1,12 +1,12 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 const app = express();
 
 const corsOption = {
-  origin: ["http://localhost:5000"],
+  origin: ["http://localhost:5173"],
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -30,6 +30,13 @@ async function run() {
     // Get data from Database
     app.get("/posts", async (req, res) => {
       const result = await postCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/posts/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await postCollection.findOne(query);
       res.send(result);
     });
 
