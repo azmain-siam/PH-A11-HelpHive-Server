@@ -72,6 +72,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/requests/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { volunteerEmail: email };
+      const result = await requestCollection.find(query).toArray();
+      res.send(result);
+    });
+
     // Delete a data
     app.delete("/post/:id", async (req, res) => {
       const id = req.params.id;
@@ -79,8 +86,15 @@ async function run() {
       const result = await postCollection.deleteOne(query);
       res.send(result);
     });
+    // Delete a request
+    app.delete("/request/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await requestCollection.deleteOne(query);
+      res.send(result);
+    });
 
-    // Update a date
+    // Update a data
     app.put("/posts/:id", async (req, res) => {
       const id = req.params.id;
       const postData = req.body;
