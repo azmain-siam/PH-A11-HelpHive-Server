@@ -5,15 +5,16 @@ require("dotenv").config();
 const port = process.env.PORT || 5000;
 const app = express();
 
+// Middleware
 const corsOption = {
   origin: ["http://localhost:5173"],
   credentials: true,
   optionSuccessStatus: 200,
 };
-
 app.use(cors(corsOption));
 app.use(express.json());
 
+// MongoDB
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.gjqtths.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
@@ -68,6 +69,14 @@ async function run() {
       const email = req.params.email;
       const query = { organizerEmail: email };
       const result = await postCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // Delete a data
+    app.delete("/post/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await postCollection.deleteOne(query);
       res.send(result);
     });
 
