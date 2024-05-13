@@ -29,22 +29,29 @@ async function run() {
     const postCollection = client.db("helphiveDB").collection("posts");
     const requestCollection = client.db("helphiveDB").collection("requests");
 
-    // Save data is request collection
+    // Save data in posts collection
+    app.post("/posts", async (req, res) => {
+      const postData = req.body;
+      const result = await postCollection.insertOne(postData);
+      res.send(result);
+    });
+
+    // Save data in request collection
     app.post("/requests", async (req, res) => {
       const requestData = req.body;
       const result = await requestCollection.insertOne(requestData);
       res.send(result);
     });
 
-    // Get data from Database
-    app.get("/posts", async (req, res) => {
-      const result = await postCollection.find().toArray();
-      res.send(result);
-    });
-
     // Get data from requests Collection
     app.get("/requests", async (req, res) => {
       const result = await requestCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Get data from Database
+    app.get("/posts", async (req, res) => {
+      const result = await postCollection.find().toArray();
       res.send(result);
     });
 
