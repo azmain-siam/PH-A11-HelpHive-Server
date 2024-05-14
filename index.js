@@ -88,14 +88,15 @@ async function run() {
     // Save data in request collection
     app.post("/requests", async (req, res) => {
       const requestData = req.body;
+      const query = {
+        email: requestData.email,
+        requestId: requestData.requestId,
+      };
+      const alreadyApplied = await requestCollection.findOne(query);
+      if (alreadyApplied) {
+        return res.status(400).send("You have already requested on this post!");
+      }
 
-      // const alreadyRequested = await requestCollection.findOne({
-      //   email: requestData.email,
-      //   requestId: requestData.requestId,
-      // });
-      // if (alreadyRequested) {
-      //   return res.status(400).send("You have already requested on this post!");
-      // }
       const result = await requestCollection.insertOne(requestData);
       res.send(result);
     });
@@ -160,7 +161,7 @@ async function run() {
     });
 
     // Update a data
-    app.put("/posts/:id",verifyToken, async (req, res) => {
+    app.put("/posts/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const postData = req.body;
       const query = { _id: new ObjectId(id) };
