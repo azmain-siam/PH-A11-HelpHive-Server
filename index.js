@@ -40,6 +40,14 @@ async function run() {
     // Save data in request collection
     app.post("/requests", async (req, res) => {
       const requestData = req.body;
+
+      // const alreadyRequested = await requestCollection.findOne({
+      //   email: requestData.email,
+      //   requestId: requestData.requestId,
+      // });
+      // if (alreadyRequested) {
+      //   return res.status(400).send("You have already requested on this post!");
+      // }
       const result = await requestCollection.insertOne(requestData);
       res.send(result);
     });
@@ -52,7 +60,12 @@ async function run() {
 
     // Get data from Database
     app.get("/posts", async (req, res) => {
-      const result = await postCollection.find().toArray();
+      const search = req.query.search;
+      console.log(search);
+      let query = {
+        post_title: { $regex: `${search}`, $options: "i" },
+      };
+      const result = await postCollection.find(query).toArray();
       res.send(result);
     });
 
