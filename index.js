@@ -1,6 +1,8 @@
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 const app = express();
@@ -13,6 +15,25 @@ const corsOption = {
 };
 app.use(cors(corsOption));
 app.use(express.json());
+app.use(cookieParser());
+
+// verify jwt middleware
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).send({ message: "Unauthorized access" });
+  if (token) {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+      if (err) {
+        console.log(err);
+        return res.status(401).send({ message: "Unauthorized access" });
+      }
+      console.log(decoded);
+
+      req.user = decoded;
+      next();
+    });
+  }
+};
 
 // MongoDB
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.gjqtths.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -29,6 +50,33 @@ async function run() {
   try {
     const postCollection = client.db("helphiveDB").collection("posts");
     const requestCollection = client.db("helphiveDB").collection("requests");
+
+    // jwt generate
+    app.post("/jwt", async (req, res) => {
+      const email = req.body;
+      const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "365d",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
+
+    // Clear token on logout
+    app.get("/logout", (req, res) => {
+      res
+        .clearCookie("token", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          maxAge: 0,
+        })
+        .send({ success: true });
+    });
 
     // Save data in posts collection
     app.post("/posts", async (req, res) => {
@@ -60,12 +108,11 @@ async function run() {
 
     // Get data from Database
     app.get("/posts", async (req, res) => {
-      const search = req.query.search;
-      console.log(search);
-      let query = {
-        post_title: { $regex: `${search}`, $options: "i" },
-      };
-      const result = await postCollection.find(query).toArray();
+      // const search = req.query.search;
+      // let query = {
+      //   post_title: { $regex: `${search}`, $options: "i" },
+      // };
+      const result = await postCollection.find().toArray();
       res.send(result);
     });
 
@@ -78,14 +125,19 @@ async function run() {
     });
 
     // Get specific user posted data
-    app.get("/post/:email", async (req, res) => {
+    app.get("/post/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
+      console.log(tokenEmail);
       const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const query = { organizerEmail: email };
       const result = await postCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.get("/requests/:email", async (req, res) => {
+    app.get("/requests/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { volunteerEmail: email };
       const result = await requestCollection.find(query).toArray();
@@ -108,7 +160,7 @@ async function run() {
     });
 
     // Update a data
-    app.put("/posts/:id", async (req, res) => {
+    app.put("/posts/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const postData = req.body;
       const query = { _id: new ObjectId(id) };
