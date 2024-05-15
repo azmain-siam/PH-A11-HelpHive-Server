@@ -9,7 +9,11 @@ const app = express();
 
 // Middleware
 const corsOption = {
-  origin: ["http://localhost:5173"],
+  origin: [
+    "http://localhost:5173",
+    "https://a11-helphive.web.app",
+    "https://a11-helphive.firebaseapp.com",
+  ],
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -55,7 +59,7 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       const email = req.body;
       const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "365d",
+        expiresIn: "1d",
       });
       res
         .cookie("token", token, {
@@ -67,15 +71,25 @@ async function run() {
     });
 
     // Clear token on logout
-    app.get("/logout", (req, res) => {
+    // app.get("/logout", (req, res) => {
+    //   res
+    //     .clearCookie("token", {
+    //       httpOnly: true,
+    //       secure: process.env.NODE_ENV === "production",
+    //       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    //       maxAge: 0,
+    //     })
+    //     .send({ success: true });
+    // });
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
       res
         .clearCookie("token", {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
           maxAge: 0,
+          secure: process.env.NODE_ENV === "production" ? true : false,
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
-        .send({ success: true });
+        .send({ status: true });
     });
 
     // Save data in posts collection
@@ -98,6 +112,16 @@ async function run() {
       }
 
       const result = await requestCollection.insertOne(requestData);
+      // Update volunteer needed amount in posts collection
+      const updatedPost = {
+        $inc: { volunteers_needed: -1 },
+      };
+      const postQuery = { _id: new ObjectId(requestData.requestId) };
+      const updateVolunteer = await postCollection.updateOne(
+        postQuery,
+        updatedPost
+      );
+      console.log(updateVolunteer);
       res.send(result);
     });
 
@@ -109,11 +133,19 @@ async function run() {
 
     // Get data from Database
     app.get("/posts", async (req, res) => {
-      // const search = req.query.search;
-      // let query = {
-      //   post_title: { $regex: `${search}`, $options: "i" },
-      // };
-      const result = await postCollection.find().toArray();
+      const search = req.query.search;
+      let query;
+      if (search) {
+        query = {
+          post_title: { $regex: `${search}`, $options: "i" },
+        };
+      } else {
+        query = {};
+      }
+      const result = await postCollection
+        .find(query)
+        .sort({ deadline: 1 })
+        .toArray();
       res.send(result);
     });
 
