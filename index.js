@@ -56,18 +56,41 @@ async function run() {
     const requestCollection = client.db("helphiveDB").collection("requests");
 
     // jwt generate
+    // app.post("/jwt", async (req, res) => {
+    //   const email = req.body;
+    //   const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {
+    //     expiresIn: "1d",
+    //   });
+    //   res
+    //     .cookie("token", token, {
+    //       httpOnly: true,
+    //       secure: process.env.NODE_ENV === "production",
+    //       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    //     })
+    //     .send({ success: true });
+    // });
+
     app.post("/jwt", async (req, res) => {
-      const email = req.body;
-      const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1d",
-      });
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-        })
-        .send({ success: true });
+      try {
+        const user = req.body;
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+          expiresIn: "365d",
+        });
+        res
+          .cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          })
+          .send({
+            status: true,
+          });
+      } catch (error) {
+        res.send({
+          status: true,
+          error: error.message,
+        });
+      }
     });
 
     // Clear token on logout
